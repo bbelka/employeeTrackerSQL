@@ -1,0 +1,23 @@
+{
+  "name": "employeetrackersql",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bbelka/employeeTrackerSQL.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/bbelka/employeeTrackerSQL/issues"
+  },
+  "homepage": "https://github.com/bbelka/employeeTrackerSQL#readme",
+  "dependencies": {
+    "inquirer": "^7.1.0",
+    "mysql": "^2.18.1"
+  }
+}

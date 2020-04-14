@@ -107,3 +107,4 @@ employee-tracker.gif
 schema.png
 Instructions.md
 .gitignore
+package-lock.json

@@ -26,7 +26,8 @@ const startQuestions = [
             "ADD",
             "VIEW",
             "UPDATE",
-            "DELETE"
+            "DELETE",
+            "QUIT"
         ]
     },
     {
@@ -90,8 +91,10 @@ const start = () => {
                     updateStuff(answers);
                     break;
                 case "DELETE":
-                    //deleteStuff;
+                    deleteStuff(answers);
                     break;
+                case "QUIT":
+                    process.exit();
 
             }
         })
@@ -109,27 +112,7 @@ const createRoleQ = [
         type: "input",
         message: "WHAT IS THE NAME OF THE ROLE?",
     }];
-const createEmpQ = [
-    {
-        name: "firstname",
-        type: "input",
-        message: "WHAT IS THE FIRST NAME OF THE EMPLOYEE?",
-    },
-    {
-        name: "lastname",
-        type: "input",
-        message: "LAST NAME?",
-    },
-    {
-        name: "roleid",
-        type: "number",
-        message: "ROLE ID?",
-    },
-    {
-        name: "managerid",
-        type: "number",
-        message: "MANAGER'S ID? (optional)",
-    }];
+
 const createStuff = (answers) => {
     switch (answers.create_options) {
         case "DEPARTMENT":
@@ -139,7 +122,12 @@ const createStuff = (answers) => {
                     { name: add_dept },
                     function (err, res) {
                         if (err) throw err;
-                        // connection.query("SELECT id, name FROM department")
+                        connection.query("SELECT id, name FROM department",
+                            function (err, res) {
+                                if (err) throw err;
+                                start();
+                            })
+
                     })
             });
             break;
@@ -151,34 +139,84 @@ const createStuff = (answers) => {
                     { title: add_role },
                     function (err, res) {
                         if (err) throw err;
-                        // connection.query("SELECT id, name FROM role")
+                        connection.query("SELECT id, title FROM role",
+                            function (err, res) {
+                                if (err) throw err;
+                                start();
+                            });
+
                     })
             });
             break;
 
         case "EMPLOYEE":
-            inquirer.prompt(createEmpQ).then((answer) => {
+            inquirer.prompt([
+                {
+                    name: "firstname",
+                    type: "input",
+                    message: "WHAT IS THE FIRST NAME OF THE EMPLOYEE?"
+                },
+                {
+                    name: "lastname",
+                    type: "input",
+                    message: "LAST NAME?"
+                }
+            ]).then((answer) => {
                 const firstname = answer.firstname;
-                const lastname = answer.lastname;
-                const roleid = answer.roleid;
-                const managerid = answer.managerid
-                connection.query("INSERT INTO employee SET ?",
-                    {
-                        first_name: firstname,
-                        last_name: lastname,
-                        role_id: roleid,
-                        manager_id: managerid
-                    },
+                const lastname = answer.lastname
+                connection.query("SELECT id, title FROM role",
                     function (err, res) {
                         if (err) throw err;
-                        start();
-                    })
+                        console.table(res);
+                        inquirer.prompt(
+                            {
+                                name: "roleid",
+                                type: "number",
+                                message: "WHAT WILL THEIR ROLE BE? **SELECT BY ID**"
+                            }
+                        ).then((answer) => {
+                            const roleid = answer.roleid;
+                            connection.query("SELECT id, name FROM manager",
+                                function (err, res) {
+                                    if (err) throw err;
+                                    console.table(res);
+                                    inquirer.prompt(
+                                        {
+                                            name: "managerid",
+                                            type: "number",
+                                            message: "WHO IS THEIR MANAGER? **SELECT BY ID**"
+                                        }
+                                    ).then((answer) => {
+                                        const managerid = answer.managerid
+                                        connection.query("INSERT INTO employee SET ?",
+                                            {
+                                                first_name: firstname,
+                                                last_name: lastname,
+                                                role_id: roleid,
+                                                manager_id: managerid
+                                            },
+                                            function (err, res) {
+                                                if (err) throw err;
+                                                connection.query("SELECT employee.id, employee.first_name, employee.last_name, role.title FROM employee INNER JOIN role ON employee.role_id = role.id",
+                                                    function (err, res) {
+                                                        if (err) throw err;
+                                                        console.table(res);
+                                                        start();
+                                                    }
+                                                )
+                                            }
+                                        )
+                                    });
+                                }
+                            )
+                        });
+
+                    }
+                )
             });
-            // connection.query("SELECT id, first_name, last_name, role_id, manager_id FROM employee",
-            //     function (err, res) { if (err) throw err })
             break;
-    }
-}
+    };
+};
 
 const readStuff = (answers) => {
     switch (answers.read_options) {
@@ -222,7 +260,7 @@ const readStuff = (answers) => {
                         }
                     ).then((answer) => {
                         const whichManager = answer.which_manager;
-                        connection.query("SELECT employee.first_name, employee.last_name, role.title FROM employee INNER JOIN role ON employee.role_id=role.id WHERE employee.manager_id = ?",
+                        connection.query("SELECT employee.id, employee.first_name, employee.last_name, role.title FROM employee INNER JOIN role ON employee.role_id=role.id WHERE employee.manager_id = ?",
                             [whichManager],
                             function (err, res) {
                                 if (err) throw err;
@@ -233,7 +271,7 @@ const readStuff = (answers) => {
                 })
             break;
     }
-}
+};
 
 const updateStuff = (answers) => {
     switch (answers.update_options) {
@@ -257,7 +295,7 @@ const updateStuff = (answers) => {
                                     inquirer.prompt(
                                         {
                                             name: "update_selections",
-                                            message: "WHAT WOULD YOU LIKE THE EMPLOYEE'S NEW ROLE ID TO BE?",
+                                            message: "WHAT WOULD YOU LIKE THE EMPLOYEE'S NEW ROLE ID TO BE? **SELECT BY ID**",
                                             type: "number"
                                         }
                                     ).then((answer) => {
@@ -271,6 +309,7 @@ const updateStuff = (answers) => {
                                                     { id: selection },
                                                     function (err, res) {
                                                         if (err) throw err;
+                                                        console.log("!!UPDATED!!");
                                                         console.table(res);
                                                         start();
 
@@ -283,14 +322,14 @@ const updateStuff = (answers) => {
                 });
             break;
         case "EMPLOYEE MANAGER":
-            connection.query("SELECT id, first_name, last_name, manager_id FROM employee",
+            connection.query("SELECT employee.id, employee.first_name, employee.last_name, role.department_id FROM employee INNER JOIN role ON employee.role_id=role.id WHERE role.title <> 'Manager'",
                 function (err, res) {
                     if (err) throw err;
                     console.table(res);
                     inquirer.prompt(
                         {
                             name: "update_id",
-                            message: "PLEASE SELECT WHICH EMPLOYEE YOU'D LIKE TO UPDATE, BY THEIR ID.",
+                            message: "PLEASE SELECT WHICH EMPLOYEE YOU'D LIKE TO UPDATE. **SELECT BY ID**",
                             type: "number"
                         }).then((answer) => {
                             const selection = answer.update_id;
@@ -301,7 +340,7 @@ const updateStuff = (answers) => {
                                     inquirer.prompt(
                                         {
                                             name: "update_selections",
-                                            message: "WHO WOULD YOU LIKE THE EMPLOYEE'S NEW MANAGER TO BE? (SELECT BY ID)",
+                                            message: "WHO WOULD YOU LIKE THE EMPLOYEE'S NEW MANAGER TO BE? **SELECT BY ID**",
                                             type: "number"
                                         }
                                     ).then((answer) => {
@@ -315,6 +354,7 @@ const updateStuff = (answers) => {
                                                     { id: selection },
                                                     function (err, res) {
                                                         if (err) throw err;
+                                                        console.log("!!UPDATED!!");
                                                         console.table(res);
                                                         start();
 
@@ -327,4 +367,91 @@ const updateStuff = (answers) => {
                 });
             break;
     }
-}
+};
+
+const deleteStuff = (answers) => {
+    switch (answers.delete_options) {
+        case "DEPARTMENT":
+            connection.query("SELECT id, name FROM department",
+                function (err, res) {
+                    if (err) throw err;
+                    console.table(res);
+                    inquirer.prompt(
+                        {
+                            name: "which_dept",
+                            message: "WHICH DEMPARTMENT WOULD YOU LIKE TO DELETE? **SELECT BY ID**",
+                            type: "number"
+                        }
+                    ).then((answer) => {
+                        const whichDept = answer.which_dept;
+                        connection.query("DELETE FROM department WHERE ?",
+                            { id: whichDept },
+                            function (err, res) {
+                                if (err) throw err;
+                                connection.query("SELECT id, name FROM department",
+                                    function (err, res) {
+                                        console.table(res);
+                                        console.log("!!DELETED!!");
+                                        start();
+                                    })
+                            })
+                    })
+                }
+            )
+        case "ROLE":
+            connection.query("SELECT id, title FROM role",
+                function (err, res) {
+                    if (err) throw err;
+                    console.table(res);
+                    inquirer.prompt(
+                        {
+                            name: "which_role",
+                            message: "WHICH ROLE WOULD YOU LIKE TO DELETE? **SELECT BY ID**",
+                            type: "number"
+                        }
+                    ).then((answer) => {
+                        const whichRole = answer.which_role;
+                        connection.query("DELETE FROM role WHERE ?",
+                            { id: whichRole },
+                            function (err, res) {
+                                if (err) throw err;
+                                connection.query("SELECT id, title FROM role",
+                                    function (err, res) {
+                                        console.log("!!DELETED!!");
+                                        console.table(res);
+                                        start();
+                                    })
+                            })
+                    })
+                }
+            )
+        case "EMPLOYEE":
+            connection.query("SELECT id, first_name, last_name FROM employee",
+                function (err, res) {
+                    if (err) throw err;
+                    console.table(res);
+                    inquirer.prompt(
+                        {
+                            name: "which_emp",
+                            message: "WHICH EMPLOYEE WOULD YOU LIKE TO DELETE? **SELECT BY ID**",
+                            type: "number"
+                        }
+                    ).then((answer) => {
+                        const whichEmp = answer.which_emp;
+                        connection.query("DELETE FROM role WHERE ?",
+                            { id: whichEmp },
+                            function (err, res) {
+                                if (err) throw err;
+                                connection.query("SELECT id, first_name, last_name FROM role",
+                                    function (err, res) {
+                                        console.log("!!DELETED!!");
+                                        console.table(res);
+                                        start();
+                                    })
+                            })
+                    })
+                }
+            )
+
+    }
+};

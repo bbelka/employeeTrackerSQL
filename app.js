@@ -1,7 +1,7 @@
-var mysql = require("mysql");
-var inquirer = require("inquirer");
+const mysql = require("mysql");
+const inquirer = require("inquirer");
 
-var connection = mysql.createConnection({
+const connection = mysql.createConnection({
     host: "localhost",
 
     port: 3306,
@@ -87,7 +87,7 @@ const start = () => {
                     readStuff(answers);
                     break;
                 case "UPDATE":
-                    //updateStuff;
+                    updateStuff(answers);
                     break;
                 case "DELETE":
                     //deleteStuff;
@@ -171,6 +171,7 @@ const createStuff = (answers) => {
                     },
                     function (err, res) {
                         if (err) throw err;
+                        start();
                     })
             });
             // connection.query("SELECT id, first_name, last_name, role_id, manager_id FROM employee",
@@ -186,14 +187,16 @@ const readStuff = (answers) => {
                 function (err, res) {
                     if (err) throw err;
                     console.table(res);
+                    start();
                 });
             break;
 
         case "ROLES":
-            connection.query("SELECT id, title FROM role",
+            connection.query("SELECT id, title, salary, department_id FROM role",
                 function (err, res) {
                     if (err) throw err;
                     console.table(res);
+                    start();
                 });
             break;
 
@@ -202,9 +205,116 @@ const readStuff = (answers) => {
                 function (err, res) {
                     if (err) throw err;
                     console.table(res);
+                    start();
                 });
 
 
+            break;
+            case "EMPLOYEES BY MANAGER":
+                connection.query("SELECT employee.id, employee.first_name, employee.last_name, employee.manager_id FROM employee INNER JOIN role ON employee.role_id=role.id WHERE role.title = 'Manager'",
+                // { id: selection },
+                function (err, res) {
+                    if (err) throw err;
+                    console.table(res);
+                    start();
+                });
+
+
+            break;
+
+    }
+}
+
+const updateStuff = (answers) => {
+    switch (answers.update_options) {
+        case "EMPLOYEE ROLE":
+            connection.query("SELECT id, first_name, last_name, role_id, manager_id FROM employee",
+                function (err, res) {
+                    if (err) throw err;
+                    console.table(res);
+                    inquirer.prompt(
+                        {
+                            name: "update_id",
+                            message: "PLEASE SELECT WHICH EMPLOYEE YOU'D LIKE TO UPDATE, BY THEIR ID.",
+                            type: "number"
+                        }).then((answer) => {
+                            const selection = answer.update_id;
+                            connection.query("SELECT id, title FROM role",
+                                // { id: selection },
+                                function (err, res) {
+                                    if (err) throw err;
+                                    console.table(res);
+                                    inquirer.prompt(
+                                        {
+                                            name: "update_selections",
+                                            message: "WHAT WOULD YOU LIKE THE EMPLOYEE'S NEW ROLE ID TO BE?",
+                                            type: "number"
+                                        }
+                                    ).then((answer) => {
+                                        const roleid = answer.update_selections;
+
+                                        connection.query("UPDATE employee SET ? WHERE ?",
+                                            [{ role_id: roleid }, { id: selection }],
+                                            function (err, res) {
+                                                if (err) throw err;
+                                                connection.query("SELECT id, first_name, last_name, role_id, manager_id FROM employee WHERE ?",
+                                                    { id: selection },
+                                                    function (err, res) {
+                                                        if (err) throw err;
+                                                        console.table(res);
+                                                        start();
+
+                                                    })
+                                            })
+                                    })
+                                })
+                        })
+
+                });
+            break;
+        case "EMPLOYEE MANAGER":
+            connection.query("SELECT id, first_name, last_name, manager_id FROM employee",
+                function (err, res) {
+                    if (err) throw err;
+                    console.table(res);
+                    inquirer.prompt(
+                        {
+                            name: "update_id",
+                            message: "PLEASE SELECT WHICH EMPLOYEE YOU'D LIKE TO UPDATE, BY THEIR ID.",
+                            type: "number"
+                        }).then((answer) => {
+                            const selection = answer.update_id;
+                            connection.query("SELECT employee.id, employee.first_name, employee.last_name, role.department_id FROM employee INNER JOIN role ON employee.role_id=role.id WHERE role.title = 'Manager'",
+                                function (err, res) {
+                                    if (err) throw err;
+                                    console.table(res);
+                                    inquirer.prompt(
+                                        {
+                                            name: "update_selections",
+                                            message: "WHO WOULD YOU LIKE THE EMPLOYEE'S NEW MANAGER TO BE? (SELECT BY ID)",
+                                            type: "number"
+                                        }
+                                    ).then((answer) => {
+                                        const managerid = answer.update_selections;
+
+                                        connection.query("UPDATE employee SET ? WHERE ?",
+                                            [{ manager_id: managerid }, { id: selection }],
+                                            function (err, res) {
+                                                if (err) throw err;
+                                                connection.query("SELECT id, first_name, last_name, role_id, manager_id FROM employee WHERE ?",
+                                                    { id: selection },
+                                                    function (err, res) {
+                                                        if (err) throw err;
+                                                        console.table(res);
+                                                        start();
+
+                                                    })
+                                            })
+                                    })
+                                })
+                        })
+
+                });
             break;
     }
 }

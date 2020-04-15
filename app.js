@@ -208,20 +208,30 @@ const readStuff = (answers) => {
                     start();
                 });
 
-
             break;
-            case "EMPLOYEES BY MANAGER":
-                connection.query("SELECT employee.id, employee.first_name, employee.last_name, employee.manager_id FROM employee INNER JOIN role ON employee.role_id=role.id WHERE role.title = 'Manager'",
-                // { id: selection },
+        case "EMPLOYEES BY MANAGER":
+            connection.query("SELECT employee.id, employee.first_name, employee.last_name, role.department_id FROM employee INNER JOIN role ON employee.role_id=role.id WHERE role.title = 'Manager'",
                 function (err, res) {
                     if (err) throw err;
                     console.table(res);
-                    start();
-                });
-
-
+                    inquirer.prompt(
+                        {
+                            name: "which_manager",
+                            message: "WHICH MANAGER'S EMPLOYEES WOULD YO LIKE TO SEE? **SELECT BY ID**",
+                            type: "number"
+                        }
+                    ).then((answer) => {
+                        const whichManager = answer.which_manager;
+                        connection.query("SELECT employee.first_name, employee.last_name, role.title FROM employee INNER JOIN role ON employee.role_id=role.id WHERE employee.manager_id = ?",
+                            [whichManager],
+                            function (err, res) {
+                                if (err) throw err;
+                                console.table(res);
+                                start();
+                            });
+                    })
+                })
             break;
-
     }
 }
 
@@ -235,7 +245,7 @@ const updateStuff = (answers) => {
                     inquirer.prompt(
                         {
                             name: "update_id",
-                            message: "PLEASE SELECT WHICH EMPLOYEE YOU'D LIKE TO UPDATE, BY THEIR ID.",
+                            message: "PLEASE SELECT WHICH EMPLOYEE YOU'D LIKE TO UPDATE. **SELECT BY ID**",
                             type: "number"
                         }).then((answer) => {
                             const selection = answer.update_id;
